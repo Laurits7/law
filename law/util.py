@@ -7,10 +7,10 @@ Helpful utility functions.
 __all__ = [
     "default_lock", "io_lock", "console_lock", "no_value", "rel_path", "law_src_path",
     "law_home_path", "law_run", "print_err", "abort", "is_number", "try_int", "round_discrete",
-    "str_to_int", "flag_to_bool", "common_task_params", "colored", "uncolored", "query_choice",
-    "is_pattern", "brace_expand", "range_expand", "range_join", "multi_match", "is_iterable",
-    "is_lazy_iterable", "make_list", "make_tuple", "make_unique", "is_nested", "flatten",
-    "merge_dicts", "which", "map_verbose", "map_struct", "mask_struct", "tmp_file",
+    "str_to_int", "flag_to_bool", "empty_context", "common_task_params", "colored", "uncolored",
+    "query_choice", "is_pattern", "brace_expand", "range_expand", "range_join", "multi_match",
+    "is_iterable", "is_lazy_iterable", "make_list", "make_tuple", "make_unique", "is_nested",
+    "flatten", "merge_dicts", "which", "map_verbose", "map_struct", "mask_struct", "tmp_file",
     "interruptable_popen", "readable_popen", "create_hash", "create_random_string", "copy_no_perm",
     "makedirs", "user_owns_file", "iter_chunks", "human_bytes", "parse_bytes", "human_duration",
     "parse_duration", "is_file_exists_error", "send_mail", "DotDict", "ShorthandDict",
@@ -241,6 +241,15 @@ def flag_to_bool(s, silent=False):
         return None
     else:
         raise ValueError("cannot convert to bool: {}".format(s))
+
+
+@contextlib.contextmanager
+def empty_context():
+    """
+    Yields an empty context that can be used in case of dynamically choosing context managers while
+    maintaining code structure.
+    """
+    yield
 
 
 def common_task_params(task_instance, task_cls):
@@ -1774,6 +1783,72 @@ class ShorthandDict(collections.OrderedDict):
             self[attr] = value
         else:
             super(ShorthandDict, self).__setattr__(attr, value)
+
+
+class InsertableDict(collections.OrderedDict):
+    """
+    Subclass of *OrderedDict* that supports inserting elements before or after certain keys.
+    Example:
+
+    .. code-block:: python
+
+        d = InsertableDict(foo=123, bar=456)
+
+        d.insert_before("bar", "test", 999)
+        print(d)  # -> InsertableDict([('foo', 123), ('test', 999), ('bar', 456)])
+
+        d.insert_after("test", "foo", "new_value")
+        print(d)  # -> InsertableDict([('test', 999), ('foo', 'new_value'), ('bar', 456)])
+    """
+
+    def _insert(self, search_key, key, value, offset):
+        # when key is a list or dict and value is None, assume key refers to key-value pairs
+        if isinstance(key, (list, dict)) and value is None:
+            new_items = key.items() if isinstance(key, dict) else key
+            new_keys = [k for k, v in new_items]
+        else:
+            new_items = [(key, value)]
+            new_keys = [key]
+
+        # if the search key is not present, insert the new pairs and finish
+        if search_key not in self:
+            self.update(new_items)
+            return
+
+        # create a copy if the index
+        items = list(self.items())
+
+        # find the position where to insert
+        pos = items.index((search_key, self[search_key])) + offset
+
+        # construct the new items without duplicates
+        items = [
+            (k, v) for k, v in items[:pos]
+            if k not in new_keys
+        ] + new_items + [
+            (k, v) for k, v in items[pos:]
+            if k not in new_keys
+        ]
+
+        # rebuild the index
+        self.clear()
+        self.update(items)
+
+    def insert_before(self, before_key, key, value=None):
+        """
+        Inserts a *key* - *value* pair before the key *before_key*. When this key does not exist,
+        the new pair is added to the end. When *key* is list or dictionary and value is *None*,
+        multiple new values are inserted.
+        """
+        self._insert(before_key, key, value, 0)
+
+    def insert_after(self, after_key, key, value=None):
+        """
+        Inserts a *key* - *value* pair after the key *after_key*. When this key does not exist, the
+        new pair is added to the end. When *key* is list or dictionary and value is *None*,
+        multiple new values are inserted.
+        """
+        self._insert(after_key, key, value, 1)
 
 
 def open_compat(*args, **kwargs):
