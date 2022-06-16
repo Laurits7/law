@@ -1095,7 +1095,7 @@ def interruptable_popen(*args, **kwargs):
     # start the subprocess in a new process group
     kwargs["preexec_fn"] = os.setsid
     p = subprocess.Popen(*args, **kwargs)
-    p.wait()
+
     # handle interrupts
     try:
         out, err = p.communicate()
@@ -1161,7 +1161,7 @@ def readable_popen(*args, **kwargs):
     kwargs["stderr"] = subprocess.STDOUT
 
     p = subprocess.Popen(*args, **kwargs)
-
+    p.wait()
     def line_gen():
         for line in iter(lambda: p.stdout.readline(), ""):
             if six.PY3:
