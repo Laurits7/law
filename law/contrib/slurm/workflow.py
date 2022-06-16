@@ -4,7 +4,7 @@
 Slurm workflow implementation. See https://slurm.schedmd.com.
 """
 
-__all__ = ["SlurmWorkflow"]
+__all__ = ["SlurmWorkflow", "SlurmWorkflowProxy"]
 
 
 import os

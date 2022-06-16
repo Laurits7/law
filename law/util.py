@@ -1095,7 +1095,7 @@ def interruptable_popen(*args, **kwargs):
     # start the subprocess in a new process group
     kwargs["preexec_fn"] = os.setsid
     p = subprocess.Popen(*args, **kwargs)
-
+    p.wait()
     # handle interrupts
     try:
         out, err = p.communicate()

@@ -944,6 +944,7 @@ class BaseRemoteWorkflowProxy(BaseWorkflowProxy):
                 for i, (job_num, data) in enumerate(six.iteritems(newly_failed_jobs)):
                     branches = self.submission_data.jobs[job_num]["branches"]
                     log_file = self.submission_data.jobs[job_num]["log_file"]
+                    self.task.failureLog_callback(log_file, self.task)
                     ext = ""
                     if data["code"] in self.job_error_messages:
                         law_err = self.job_error_messages[data["code"]]
@@ -1149,6 +1150,12 @@ class BaseRemoteWorkflow(BaseWorkflow):
         new ones. This is the case when either *cancel_jobs* or *cleanup_jobs* is *True*.
         """
         return self.cancel_jobs or self.cleanup_jobs
+
+    def failureLog_callback(self, log_file, taskRef):
+        """
+        Configurable callback that is called for each newly failed jobs to analyze their log_file.
+        """
+        return
 
     def poll_callback(self, poll_data):
         """
